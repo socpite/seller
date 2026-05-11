@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Product {
+  id        Int      @id @default(autoincrement())
+  maSp      String   @unique @map("ma_sp")
+  maSpCha   String?  @map("ma_sp_cha")
+  ten       String
+  donVi     String   @default("Cái") @map("don_vi")
+  anhUrl    String?  @map("anh_url")
+  giaNhap   Decimal  @default(0) @map("gia_nhap") @db.Decimal(14, 2)
+  vatNhap   Decimal  @default(0) @map("vat_nhap") @db.Decimal(5, 2)
+  giaBan    Decimal  @default(0) @map("gia_ban") @db.Decimal(14, 2)
+  vatBan    Decimal  @default(0) @map("vat_ban") @db.Decimal(5, 2)
+  giaVon    Decimal  @default(0) @map("gia_von") @db.Decimal(14, 2)
+  giaSi     Decimal  @default(0) @map("gia_si") @db.Decimal(14, 2)
+  ton       Int      @default(0)
+  ghiChu    String?  @map("ghi_chu")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  movements     StockMovement[]
+  purchaseItems PurchaseItem[]
+  salesItems    SalesItem[]
+
+  @@index([maSpCha])
+  @@map("products")
+}
+
+enum MovementType {
+  NHAP
+  BAN
+  DIEU_CHINH
+  HANG_DOI
+}
+
+model StockMovement {
+  id        Int          @id @default(autoincrement())
+  productId Int          @map("product_id")
+  delta     Int
+  type      MovementType
+  refId     Int?         @map("ref_id")
+  ghiChu    String?      @map("ghi_chu")
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId, createdAt])
+  @@map("stock_movements")
+}
+
+model PurchaseOrder {
+  id           Int      @id @default(autoincrement())
+  ngay         DateTime @default(now())
+  nhaCungCap   String?  @map("nha_cung_cap")
+  phiVanChuyen Decimal  @default(0) @map("phi_van_chuyen") @db.Decimal(14, 2)
+  tongTien     Decimal  @default(0) @map("tong_tien") @db.Decimal(14, 2)
+  ghiChu       String?  @map("ghi_chu")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  items PurchaseItem[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int     @map("order_id")
+  productId Int     @map("product_id")
+  soLuong   Int     @map("so_luong")
+  giaNhap   Decimal @map("gia_nhap") @db.Decimal(14, 2)
+  vat       Decimal @default(0) @db.Decimal(5, 2)
+  giaVonLo  Decimal @default(0) @map("gia_von_lo") @db.Decimal(14, 2)
+
+  order   PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product       @relation(fields: [productId], references: [id])
+
+  @@map("purchase_items")
+}
+
+model SalesOrder {
+  id        Int      @id @default(autoincrement())
+  ngay      DateTime @default(now())
+  kenh      String   @default("offline")
+  khachHang String?  @map("khach_hang")
+  sdt       String?
+  chietKhau Decimal  @default(0) @map("chiet_khau") @db.Decimal(14, 2)
+  tongTien  Decimal  @default(0) @map("tong_tien") @db.Decimal(14, 2)
+  loiNhuan  Decimal  @default(0) @map("loi_nhuan") @db.Decimal(14, 2)
+  ghiChu    String?  @map("ghi_chu")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  items    SalesItem[]
+  payments Payment[]
+
+  @@index([ngay])
+  @@map("sales_orders")
+}
+
+model SalesItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int     @map("order_id")
+  productId Int     @map("product_id")
+  soLuong   Int     @map("so_luong")
+  giaBan    Decimal @map("gia_ban") @db.Decimal(14, 2)
+  giaVon    Decimal @map("gia_von") @db.Decimal(14, 2)
+  vat       Decimal @default(0) @db.Decimal(5, 2)
+  chietKhau Decimal @default(0) @map("chiet_khau") @db.Decimal(14, 2)
+
+  order   SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product    @relation(fields: [productId], references: [id])
+
+  @@map("sales_items")
+}
+
+enum PaymentMethod {
+  TIEN_MAT
+  CHUYEN_KHOAN
+  QUET_THE
+}
+
+model Payment {
+  id         Int           @id @default(autoincrement())
+  orderId    Int           @map("order_id")
+  phuongThuc PaymentMethod @map("phuong_thuc")
+  soTien     Decimal       @map("so_tien") @db.Decimal(14, 2)
+  maGiaoDich String?       @map("ma_giao_dich")
+
+  order SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
