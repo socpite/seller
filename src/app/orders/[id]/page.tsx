@@ -20,16 +20,53 @@ export default async function OrderDetailPage({
     include: {
       items: { include: { product: true } },
       payments: true,
+      returns: { include: { items: true } },
     },
   });
   if (!order) notFound();
+
+  const returnedQty = new Map<number, number>();
+  for (const r of order.returns) {
+    for (const ri of r.items) {
+      returnedQty.set(ri.productId, (returnedQty.get(ri.productId) ?? 0) + ri.soLuong);
+    }
+  }
+  const canReturn = order.items.some(
+    (it) => it.soLuong - (returnedQty.get(it.productId) ?? 0) > 0,
+  );
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Đơn #{order.id}</h1>
-        <Link href="/orders" className="text-sm text-blue-600">← Tất cả đơn</Link>
+        <div className="flex gap-3 items-center">
+          {canReturn && (
+            <Link
+              href={`/orders/${order.id}/return`}
+              className="border bg-white px-3 py-1.5 rounded text-sm hover:bg-neutral-100"
+            >
+              Trả hàng
+            </Link>
+          )}
+          <Link href="/orders" className="text-sm text-blue-600">← Tất cả đơn</Link>
+        </div>
       </div>
+
+      {order.returns.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+          <div className="font-medium mb-1">Phiếu trả liên quan:</div>
+          <ul className="space-y-0.5">
+            {order.returns.map((r) => (
+              <li key={r.id}>
+                <Link href={`/returns/${r.id}`} className="text-blue-600 hover:underline">
+                  #{r.id}
+                </Link>{" "}
+                — {r.ngay.toLocaleString("vi-VN")} — {vnd(r.tongHoan)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Info label="Ngày" value={order.ngay.toLocaleString("vi-VN")} />

@@ -32,6 +32,7 @@ model Product {
   movements     StockMovement[]
   purchaseItems PurchaseItem[]
   salesItems    SalesItem[]
+  returnItems   SalesReturnItem[]
 
   @@index([maSpCha])
   @@map("products")
@@ -42,6 +43,7 @@ enum MovementType {
   BAN
   DIEU_CHINH
   HANG_DOI
+  HANG_TRA
   XUAT_HUY
 }
 
@@ -104,9 +106,40 @@ model SalesOrder {
 
   items    SalesItem[]
   payments Payment[]
+  returns  SalesReturn[]
 
   @@index([ngay])
   @@map("sales_orders")
+}
+
+model SalesReturn {
+  id        Int      @id @default(autoincrement())
+  orderId   Int      @map("order_id")
+  ngay      DateTime @default(now())
+  lyDo      String?  @map("ly_do")
+  tongHoan  Decimal  @default(0) @map("tong_hoan") @db.Decimal(14, 2)
+  ghiChu    String?  @map("ghi_chu")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order SalesOrder        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items SalesReturnItem[]
+
+  @@index([orderId])
+  @@map("sales_returns")
+}
+
+model SalesReturnItem {
+  id        Int     @id @default(autoincrement())
+  returnId  Int     @map("return_id")
+  productId Int     @map("product_id")
+  soLuong   Int     @map("so_luong")
+  giaBan    Decimal @map("gia_ban") @db.Decimal(14, 2)
+  giaVon    Decimal @map("gia_von") @db.Decimal(14, 2)
+
+  ret     SalesReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  product Product     @relation(fields: [productId], references: [id])
+
+  @@map("sales_return_items")
 }
 
 model SalesItem {

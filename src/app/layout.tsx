@@ -17,6 +17,7 @@ const nav = [
   { href: "/purchases", label: "Nhập hàng" },
   { href: "/stock-out", label: "Xuất hủy" },
   { href: "/orders", label: "Bán hàng" },
+  { href: "/returns", label: "Trả hàng" },
 ];
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
