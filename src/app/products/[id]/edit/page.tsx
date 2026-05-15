@@ -23,9 +23,13 @@ export default async function EditProductPage({
         values={{
           maSp: product.maSp,
           maSpCha: product.maSpCha,
+          maVach: product.maVach,
           ten: product.ten,
           donVi: product.donVi,
           anhUrl: product.anhUrl,
+          danhMuc: product.danhMuc,
+          hangTrong: product.hangTrong,
+          linkWeb: product.linkWeb,
           giaNhap: product.giaNhap.toString(),
           vatNhap: product.vatNhap.toString(),
           giaBan: product.giaBan.toString(),

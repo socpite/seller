@@ -46,7 +46,11 @@ export default async function PurchasesPage() {
           <tbody className="divide-y">
             {orders.map((o) => (
               <tr key={o.id}>
-                <td className="px-3 py-2">#{o.id}</td>
+                <td className="px-3 py-2">
+                  <Link href={`/purchases/${o.id}`} className="text-blue-600 hover:underline">
+                    #{o.id}
+                  </Link>
+                </td>
                 <td className="px-3 py-2">{o.ngay.toLocaleString("vi-VN")}</td>
                 <td className="px-3 py-2">{o.nhaCungCap ?? "—"}</td>
                 <td className="px-3 py-2 text-right">{o.items.length}</td>

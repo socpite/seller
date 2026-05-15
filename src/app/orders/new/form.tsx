@@ -17,11 +17,28 @@ type Row = {
   soLuong: number;
   giaBan: number;
   vat: number;
-  chietKhau: number;
+  chietKhauPct: number;
 };
 
 let counter = 0;
-const newRow = (): Row => ({ key: ++counter, productId: "", soLuong: 1, giaBan: 0, vat: 0, chietKhau: 0 });
+const newRow = (): Row => ({
+  key: ++counter,
+  productId: "",
+  soLuong: 1,
+  giaBan: 0,
+  vat: 0,
+  chietKhauPct: 0,
+});
+
+function lineGross(r: Row) {
+  return r.soLuong * r.giaBan * (1 + r.vat / 100);
+}
+function lineCk(r: Row) {
+  return (lineGross(r) * r.chietKhauPct) / 100;
+}
+function lineNet(r: Row) {
+  return lineGross(r) - lineCk(r);
+}
 
 export function PosForm({
   action,
@@ -31,7 +48,7 @@ export function PosForm({
   products: Product[];
 }) {
   const [rows, setRows] = useState<Row[]>([newRow()]);
-  const [chietKhauDon, setChietKhauDon] = useState(0);
+  const [chietKhauDonPct, setChietKhauDonPct] = useState(0);
   const [tienMat, setTienMat] = useState(0);
   const [chuyenKhoan, setChuyenKhoan] = useState(0);
   const [quetThe, setQuetThe] = useState(0);
@@ -51,29 +68,23 @@ export function PosForm({
       rows.reduce((s, r) => {
         const p = typeof r.productId === "number" ? productMap.get(r.productId) : undefined;
         if (!p) return s;
-        return s + (r.soLuong * r.giaBan * (1 + r.vat / 100) - r.chietKhau);
+        return s + lineNet(r);
       }, 0),
-    [rows, productMap]
+    [rows, productMap],
   );
+  const chietKhauDon = (subtotal * chietKhauDonPct) / 100;
   const tongTien = Math.max(0, subtotal - chietKhauDon);
   const daThanhToan = tienMat + chuyenKhoan + quetThe;
   const conLai = tongTien - daThanhToan;
 
   function addProduct(p: Product) {
-    const existing = rows.find((r) => r.productId === p.id);
-    if (existing) {
-      setRows((rs) =>
-        rs.map((r) => (r.key === existing.key ? { ...r, soLuong: r.soLuong + 1 } : r))
-      );
-    } else {
-      const fresh = newRow();
-      setRows((rs) => {
-        const empty = rs.find((r) => r.productId === "");
-        const r: Row = { ...fresh, productId: p.id, giaBan: p.giaBan, vat: p.vatBan };
-        if (empty) return rs.map((x) => (x.key === empty.key ? r : x));
-        return [...rs, r];
-      });
-    }
+    const fresh = newRow();
+    setRows((rs) => {
+      const empty = rs.find((r) => r.productId === "");
+      const r: Row = { ...fresh, productId: p.id, giaBan: p.giaBan, vat: p.vatBan };
+      if (empty) return rs.map((x) => (x.key === empty.key ? r : x));
+      return [...rs, r];
+    });
   }
   function updateRow(key: number, patch: Partial<Row>) {
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -125,7 +136,7 @@ export function PosForm({
                 <th className="px-3 py-2">SL</th>
                 <th className="px-3 py-2">Giá bán</th>
                 <th className="px-3 py-2">VAT %</th>
-                <th className="px-3 py-2">CK</th>
+                <th className="px-3 py-2">CK %</th>
                 <th className="px-3 py-2 text-right">Thành tiền</th>
                 <th className="px-3 py-2"></th>
               </tr>
@@ -133,7 +144,8 @@ export function PosForm({
             <tbody className="divide-y">
               {rows.map((r) => {
                 const p = typeof r.productId === "number" ? productMap.get(r.productId) : undefined;
-                const line = p ? r.soLuong * r.giaBan * (1 + r.vat / 100) - r.chietKhau : 0;
+                const net = p ? lineNet(r) : 0;
+                const ckMoney = p ? lineCk(r) : 0;
                 return (
                   <tr key={r.key}>
                     <td className="px-3 py-2">
@@ -195,15 +207,20 @@ export function PosForm({
                     </td>
                     <td className="px-3 py-2">
                       <input
-                        name="chiet_khau_item"
+                        name="chiet_khau_pct_item"
                         type="number"
                         min={0}
-                        value={r.chietKhau}
-                        onChange={(e) => updateRow(r.key, { chietKhau: Number(e.target.value) || 0 })}
-                        className="w-20 border rounded px-2 py-1 text-sm"
+                        max={100}
+                        step="0.01"
+                        value={r.chietKhauPct}
+                        onChange={(e) =>
+                          updateRow(r.key, { chietKhauPct: Number(e.target.value) || 0 })
+                        }
+                        className="w-16 border rounded px-2 py-1 text-sm"
                       />
+                      <input type="hidden" name="chiet_khau_item" value={ckMoney} />
                     </td>
-                    <td className="px-3 py-2 text-right">{line.toLocaleString("vi-VN")}₫</td>
+                    <td className="px-3 py-2 text-right">{net.toLocaleString("vi-VN")}₫</td>
                     <td className="px-3 py-2">
                       <button
                         type="button"
@@ -243,6 +260,11 @@ export function PosForm({
             placeholder="SĐT"
             className="w-full border rounded px-3 py-1.5 text-sm"
           />
+          <input
+            name="nhan_vien"
+            placeholder="Nhân viên bán"
+            className="w-full border rounded px-3 py-1.5 text-sm"
+          />
         </div>
 
         <div className="bg-white border rounded-lg p-4 space-y-2">
@@ -251,16 +273,23 @@ export function PosForm({
             <span>{subtotal.toLocaleString("vi-VN")}₫</span>
           </div>
           <label className="block text-sm">
-            <span className="text-neutral-700">Chiết khấu đơn</span>
+            <span className="text-neutral-700">Chiết khấu đơn (%)</span>
             <input
-              name="chiet_khau"
               type="number"
               min={0}
-              value={chietKhauDon}
-              onChange={(e) => setChietKhauDon(Number(e.target.value) || 0)}
+              max={100}
+              step="0.01"
+              value={chietKhauDonPct}
+              onChange={(e) => setChietKhauDonPct(Number(e.target.value) || 0)}
               className="w-full border rounded px-3 py-1.5 mt-1 text-sm"
             />
           </label>
+          <input type="hidden" name="chiet_khau" value={chietKhauDon} />
+          <input type="hidden" name="chiet_khau_pct" value={chietKhauDonPct} />
+          <div className="flex justify-between text-xs text-neutral-500">
+            <span>Giảm</span>
+            <span>{chietKhauDon.toLocaleString("vi-VN")}₫</span>
+          </div>
           <div className="flex justify-between font-semibold text-base border-t pt-2">
             <span>Tổng tiền</span>
             <span>{tongTien.toLocaleString("vi-VN")}₫</span>

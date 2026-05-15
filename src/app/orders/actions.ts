@@ -10,6 +10,7 @@ type SaleItem = { productId: number; soLuong: number; giaBan: number; vat: numbe
 export async function createSale(formData: FormData) {
   const khachHang = str(formData.get("khach_hang")) || null;
   const sdt = str(formData.get("sdt")) || null;
+  const nhanVien = str(formData.get("nhan_vien")) || null;
   const chietKhauDon = num(formData.get("chiet_khau"));
   const ghiChu = str(formData.get("ghi_chu")) || null;
 
@@ -43,6 +44,7 @@ export async function createSale(formData: FormData) {
         kenh: "offline",
         khachHang,
         sdt,
+        nhanVien,
         chietKhau: chietKhauDon,
         tongTien,
         loiNhuan,

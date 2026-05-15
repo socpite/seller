@@ -45,9 +45,13 @@ function parseForm(f: FormData) {
   return {
     maSp: str(f.get("ma_sp")),
     maSpCha: str(f.get("ma_sp_cha")) || null,
+    maVach: str(f.get("ma_vach")) || null,
     ten: str(f.get("ten")),
     donVi: str(f.get("don_vi")) || "Cái",
     anhUrl: str(f.get("anh_url")) || null,
+    danhMuc: str(f.get("danh_muc")) || null,
+    hangTrong: str(f.get("hang_trong")) || null,
+    linkWeb: str(f.get("link_web")) || null,
     giaNhap: num(f.get("gia_nhap")),
     vatNhap: num(f.get("vat_nhap")),
     giaBan: num(f.get("gia_ban")),

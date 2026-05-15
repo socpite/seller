@@ -1,9 +1,13 @@
 export type ProductFormValues = {
   maSp?: string;
   maSpCha?: string | null;
+  maVach?: string | null;
   ten?: string;
   donVi?: string;
   anhUrl?: string | null;
+  danhMuc?: string | null;
+  hangTrong?: string | null;
+  linkWeb?: string | null;
   giaNhap?: string | number;
   vatNhap?: string | number;
   giaBan?: string | number;
@@ -28,9 +32,13 @@ export function ProductForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Mã SP *" name="ma_sp" defaultValue={v.maSp} required />
         <Field label="Mã SP cha" name="ma_sp_cha" defaultValue={v.maSpCha ?? ""} />
+        <Field label="Mã vạch" name="ma_vach" defaultValue={v.maVach ?? ""} />
         <Field label="Tên sản phẩm *" name="ten" defaultValue={v.ten} required full />
         <Field label="Đơn vị tính" name="don_vi" defaultValue={v.donVi ?? "Cái"} />
+        <Field label="Danh mục" name="danh_muc" defaultValue={v.danhMuc ?? ""} />
+        <Field label="Hãng tròng" name="hang_trong" defaultValue={v.hangTrong ?? ""} />
         <Field label="Link ảnh" name="anh_url" defaultValue={v.anhUrl ?? ""} />
+        <Field label="Link website" name="link_web" defaultValue={v.linkWeb ?? ""} />
         <Field label="Giá nhập" name="gia_nhap" type="number" defaultValue={v.giaNhap?.toString() ?? "0"} />
         <Field label="VAT nhập (%)" name="vat_nhap" type="number" defaultValue={v.vatNhap?.toString() ?? "0"} />
         <Field label="Giá bán" name="gia_ban" type="number" defaultValue={v.giaBan?.toString() ?? "0"} />

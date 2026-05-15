@@ -75,6 +75,49 @@ export async function createPurchase(formData: FormData) {
   redirect("/purchases");
 }
 
+export async function deletePurchase(id: number) {
+  await prisma.$transaction(async (tx) => {
+    const order = await tx.purchaseOrder.findUniqueOrThrow({
+      where: { id },
+      include: { items: true },
+    });
+
+    for (const it of order.items) {
+      await tx.product.update({
+        where: { id: it.productId },
+        data: { ton: { decrement: it.soLuong } },
+      });
+      await tx.stockMovement.create({
+        data: {
+          productId: it.productId,
+          delta: -it.soLuong,
+          type: "DIEU_CHINH",
+          refId: id,
+          ghiChu: `Xóa phiếu nhập #${id}`,
+        },
+      });
+    }
+
+    await tx.purchaseOrder.delete({ where: { id } });
+
+    const productIds = [...new Set(order.items.map((i) => i.productId))];
+    for (const pid of productIds) {
+      const remaining = await tx.purchaseItem.findMany({ where: { productId: pid } });
+      const totalQty = remaining.reduce((s, r) => s + r.soLuong, 0);
+      const totalCost = remaining.reduce(
+        (s, r) => s + Number(r.giaVonLo) * r.soLuong,
+        0,
+      );
+      const newVon = totalQty > 0 ? totalCost / totalQty : 0;
+      await tx.product.update({ where: { id: pid }, data: { giaVon: newVon } });
+    }
+  });
+
+  revalidatePath("/purchases");
+  revalidatePath("/products");
+  redirect("/purchases");
+}
+
 function parseItems(f: FormData): ItemInput[] {
   const productIds = f.getAll("product_id");
   const soLuongs = f.getAll("so_luong");

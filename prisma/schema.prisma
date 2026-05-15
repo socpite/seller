@@ -11,9 +11,13 @@ model Product {
   id        Int      @id @default(autoincrement())
   maSp      String   @unique @map("ma_sp")
   maSpCha   String?  @map("ma_sp_cha")
+  maVach    String?  @unique @map("ma_vach")
   ten       String
   donVi     String   @default("Cái") @map("don_vi")
   anhUrl    String?  @map("anh_url")
+  danhMuc   String?  @map("danh_muc")
+  hangTrong String?  @map("hang_trong")
+  linkWeb   String?  @map("link_web")
   giaNhap   Decimal  @default(0) @map("gia_nhap") @db.Decimal(14, 2)
   vatNhap   Decimal  @default(0) @map("vat_nhap") @db.Decimal(5, 2)
   giaBan    Decimal  @default(0) @map("gia_ban") @db.Decimal(14, 2)
@@ -38,6 +42,7 @@ enum MovementType {
   BAN
   DIEU_CHINH
   HANG_DOI
+  XUAT_HUY
 }
 
 model StockMovement {
@@ -90,6 +95,7 @@ model SalesOrder {
   kenh      String   @default("offline")
   khachHang String?  @map("khach_hang")
   sdt       String?
+  nhanVien  String?  @map("nhan_vien")
   chietKhau Decimal  @default(0) @map("chiet_khau") @db.Decimal(14, 2)
   tongTien  Decimal  @default(0) @map("tong_tien") @db.Decimal(14, 2)
   loiNhuan  Decimal  @default(0) @map("loi_nhuan") @db.Decimal(14, 2)
