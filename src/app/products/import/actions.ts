@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 
@@ -33,20 +32,13 @@ function pickNum(r: Row, names: string[]): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-export async function importProducts(formData: FormData): Promise<{
+export async function importProductsBatch(rows: Row[]): Promise<{
   inserted: number;
   updated: number;
   skipped: number;
   errors: string[];
 }> {
   await requireAdmin();
-  const file = formData.get("file");
-  if (!(file instanceof File)) throw new Error("Chưa chọn file");
-
-  const buf = Buffer.from(await file.arrayBuffer());
-  const wb = XLSX.read(buf, { type: "buffer" });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<Row>(ws, { defval: "" });
 
   let inserted = 0;
   let updated = 0;
@@ -99,6 +91,10 @@ export async function importProducts(formData: FormData): Promise<{
     }
   }
 
-  revalidatePath("/products");
   return { inserted, updated, skipped, errors };
+}
+
+export async function refreshProducts() {
+  await requireAdmin();
+  revalidatePath("/products");
 }
