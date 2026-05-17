@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { vnd } from "@/lib/format";
 import { adjustStock, deleteProduct } from "./actions";
+import { getRole } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,16 +12,20 @@ export default async function ProductsPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
+  const isAdmin = (await getRole()) === "admin";
   const products = await prisma.product.findMany({
-    where: q
-      ? {
-          OR: [
-            { maSp: { contains: q, mode: "insensitive" } },
-            { ten: { contains: q, mode: "insensitive" } },
-            { maSpCha: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : undefined,
+    where: {
+      archived: false,
+      ...(q
+        ? {
+            OR: [
+              { maSp: { contains: q, mode: "insensitive" } },
+              { ten: { contains: q, mode: "insensitive" } },
+              { maSpCha: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
     orderBy: { updatedAt: "desc" },
     take: 200,
   });
@@ -36,12 +41,22 @@ export default async function ProductsPage({
           >
             ⬇ Export CSV
           </a>
-          <Link
-            href="/products/new"
-            className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700"
-          >
-            + Thêm sản phẩm
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/products/import"
+              className="border bg-white px-3 py-1.5 rounded text-sm hover:bg-neutral-100"
+            >
+              ⬆ Import XLSX
+            </Link>
+          )}
+          {isAdmin && (
+            <Link
+              href="/products/new"
+              className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700"
+            >
+              + Thêm sản phẩm
+            </Link>
+          )}
         </div>
       </div>
 
@@ -88,27 +103,31 @@ export default async function ProductsPage({
                   {p.ton}
                 </td>
                 <td className="px-3 py-2">
-                  <form action={adjustStock.bind(null, p.id)} className="flex gap-1">
-                    <input
-                      name="delta"
-                      type="number"
-                      placeholder="±"
-                      className="border rounded px-2 py-0.5 w-16 text-sm"
-                    />
-                    <input
-                      name="ghi_chu"
-                      placeholder="lý do"
-                      className="border rounded px-2 py-0.5 w-24 text-sm"
-                    />
-                    <button className="text-xs px-2 py-0.5 bg-neutral-100 border rounded hover:bg-neutral-200">
-                      OK
-                    </button>
-                  </form>
+                  {isAdmin && (
+                    <form action={adjustStock.bind(null, p.id)} className="flex gap-1">
+                      <input
+                        name="delta"
+                        type="number"
+                        placeholder="±"
+                        className="border rounded px-2 py-0.5 w-16 text-sm"
+                      />
+                      <input
+                        name="ghi_chu"
+                        placeholder="lý do"
+                        className="border rounded px-2 py-0.5 w-24 text-sm"
+                      />
+                      <button className="text-xs px-2 py-0.5 bg-neutral-100 border rounded hover:bg-neutral-200">
+                        OK
+                      </button>
+                    </form>
+                  )}
                 </td>
                 <td className="px-3 py-2">
-                  <form action={deleteProduct.bind(null, p.id)}>
-                    <button className="text-xs text-red-600 hover:underline">Xoá</button>
-                  </form>
+                  {isAdmin && (
+                    <form action={deleteProduct.bind(null, p.id)}>
+                      <button className="text-xs text-red-600 hover:underline">Xoá</button>
+                    </form>
+                  )}
                 </td>
               </tr>
             ))}

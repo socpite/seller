@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export function proxy(req: NextRequest) {
-  const user = process.env.BASIC_AUTH_USER;
-  const pass = process.env.BASIC_AUTH_PASS;
+  const adminU = process.env.ADMIN_USER || process.env.BASIC_AUTH_USER;
+  const adminP = process.env.ADMIN_PASS || process.env.BASIC_AUTH_PASS;
+  const cashU = process.env.CASHIER_USER;
+  const cashP = process.env.CASHIER_PASS;
 
-  if (!user || !pass) return NextResponse.next();
+  if (!adminU && !cashU) return NextResponse.next();
 
   const header = req.headers.get("authorization");
   if (header?.startsWith("Basic ")) {
@@ -13,7 +15,18 @@ export function proxy(req: NextRequest) {
     if (idx >= 0) {
       const u = decoded.slice(0, idx);
       const p = decoded.slice(idx + 1);
-      if (u === user && p === pass) return NextResponse.next();
+      let role: "admin" | "cashier" | null = null;
+      if (adminU && u === adminU && p === adminP) role = "admin";
+      else if (cashU && u === cashU && p === cashP) role = "cashier";
+      if (role) {
+        const res = NextResponse.next();
+        res.cookies.set("seller_role", role, {
+          httpOnly: true,
+          sameSite: "strict",
+          path: "/",
+        });
+        return res;
+      }
     }
   }
 

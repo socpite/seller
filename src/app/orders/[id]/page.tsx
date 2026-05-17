@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { vnd } from "@/lib/format";
+import { deleteOrder } from "../actions";
+import { getRole } from "@/lib/auth";
 
 const PAYMENT_LABEL: Record<string, string> = {
   TIEN_MAT: "Tiền mặt",
@@ -25,6 +27,8 @@ export default async function OrderDetailPage({
   });
   if (!order) notFound();
 
+  const isAdmin = (await getRole()) === "admin";
+
   const returnedQty = new Map<number, number>();
   for (const r of order.returns) {
     for (const ri of r.items) {
@@ -47,6 +51,13 @@ export default async function OrderDetailPage({
             >
               Trả hàng
             </Link>
+          )}
+          {isAdmin && (
+            <form action={deleteOrder.bind(null, order.id)}>
+              <button className="border bg-white text-red-600 px-3 py-1.5 rounded text-sm hover:bg-red-50">
+                Xóa đơn
+              </button>
+            </form>
           )}
           <Link href="/orders" className="text-sm text-blue-600">← Tất cả đơn</Link>
         </div>

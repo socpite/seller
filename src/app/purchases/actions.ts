@@ -4,10 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { num, str } from "@/lib/format";
+import { requireAdmin } from "@/lib/auth";
 
 type ItemInput = { productId: number; soLuong: number; giaNhap: number; vat: number };
 
 export async function createPurchase(formData: FormData) {
+  await requireAdmin();
   const nhaCungCap = str(formData.get("nha_cung_cap")) || null;
   const phiVanChuyen = num(formData.get("phi_van_chuyen"));
   const ghiChu = str(formData.get("ghi_chu")) || null;
@@ -76,6 +78,7 @@ export async function createPurchase(formData: FormData) {
 }
 
 export async function deletePurchase(id: number) {
+  await requireAdmin();
   await prisma.$transaction(async (tx) => {
     const order = await tx.purchaseOrder.findUniqueOrThrow({
       where: { id },

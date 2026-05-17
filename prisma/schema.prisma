@@ -25,6 +25,7 @@ model Product {
   giaVon    Decimal  @default(0) @map("gia_von") @db.Decimal(14, 2)
   giaSi     Decimal  @default(0) @map("gia_si") @db.Decimal(14, 2)
   ton       Int      @default(0)
+  archived  Boolean  @default(false)
   ghiChu    String?  @map("ghi_chu")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -162,6 +163,19 @@ enum PaymentMethod {
   TIEN_MAT
   CHUYEN_KHOAN
   QUET_THE
+}
+
+model Customer {
+  id            Int      @id @default(autoincrement())
+  sdt           String   @unique
+  ten           String
+  diaChi        String?  @map("dia_chi")
+  chietKhauPct  Decimal  @default(0) @map("chiet_khau_pct") @db.Decimal(5, 2)
+  ghiChu        String?  @map("ghi_chu")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("customers")
 }
 
 model Payment {

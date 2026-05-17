@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { num, str } from "@/lib/format";
+import { requireAdmin } from "@/lib/auth";
 
 type SaleItem = { productId: number; soLuong: number; giaBan: number; vat: number; chietKhau: number };
 
@@ -97,6 +98,49 @@ export async function createSale(formData: FormData) {
   revalidatePath("/orders");
   revalidatePath("/");
   redirect(`/orders/${orderId}`);
+}
+
+export async function deleteOrder(id: number) {
+  await requireAdmin();
+  await prisma.$transaction(async (tx) => {
+    const order = await tx.salesOrder.findUniqueOrThrow({
+      where: { id },
+      include: { items: true, returns: { include: { items: true } } },
+    });
+
+    const returnedQty = new Map<number, number>();
+    for (const r of order.returns) {
+      for (const ri of r.items) {
+        returnedQty.set(ri.productId, (returnedQty.get(ri.productId) ?? 0) + ri.soLuong);
+      }
+    }
+
+    for (const it of order.items) {
+      const stillOut = it.soLuong - (returnedQty.get(it.productId) ?? 0);
+      if (stillOut > 0) {
+        await tx.product.update({
+          where: { id: it.productId },
+          data: { ton: { increment: stillOut } },
+        });
+        await tx.stockMovement.create({
+          data: {
+            productId: it.productId,
+            delta: stillOut,
+            type: "DIEU_CHINH",
+            refId: id,
+            ghiChu: `Xóa đơn #${id}`,
+          },
+        });
+      }
+    }
+
+    await tx.salesOrder.delete({ where: { id } });
+  });
+
+  revalidatePath("/orders");
+  revalidatePath("/products");
+  revalidatePath("/returns");
+  redirect("/orders");
 }
 
 function parseItems(f: FormData): SaleItem[] {

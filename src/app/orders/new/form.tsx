@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { lookupCustomer } from "@/app/customers/actions";
 
 type Product = {
   id: number;
@@ -49,6 +50,26 @@ export function PosForm({
 }) {
   const [rows, setRows] = useState<Row[]>([newRow()]);
   const [chietKhauDonPct, setChietKhauDonPct] = useState(0);
+  const [chietKhauDonTien, setChietKhauDonTien] = useState(0);
+  const [sdt, setSdt] = useState("");
+  const [khachHang, setKhachHang] = useState("");
+  const [customerHit, setCustomerHit] = useState<string | null>(null);
+
+  async function onSdtBlur() {
+    const s = sdt.trim();
+    if (!s) {
+      setCustomerHit(null);
+      return;
+    }
+    const c = await lookupCustomer(s);
+    if (c) {
+      if (!khachHang) setKhachHang(c.ten);
+      if (chietKhauDonPct === 0 && c.chietKhauPct > 0) setChietKhauDonPct(c.chietKhauPct);
+      setCustomerHit(`${c.ten} · CK ${c.chietKhauPct}%`);
+    } else {
+      setCustomerHit("Khách mới");
+    }
+  }
   const [tienMat, setTienMat] = useState(0);
   const [chuyenKhoan, setChuyenKhoan] = useState(0);
   const [quetThe, setQuetThe] = useState(0);
@@ -72,7 +93,7 @@ export function PosForm({
       }, 0),
     [rows, productMap],
   );
-  const chietKhauDon = (subtotal * chietKhauDonPct) / 100;
+  const chietKhauDon = (subtotal * chietKhauDonPct) / 100 + chietKhauDonTien;
   const tongTien = Math.max(0, subtotal - chietKhauDon);
   const daThanhToan = tienMat + chuyenKhoan + quetThe;
   const conLai = tongTien - daThanhToan;
@@ -251,13 +272,21 @@ export function PosForm({
         <div className="bg-white border rounded-lg p-4 space-y-2">
           <h2 className="font-medium">Khách hàng</h2>
           <input
-            name="khach_hang"
-            placeholder="Tên khách hàng"
+            name="sdt"
+            value={sdt}
+            onChange={(e) => setSdt(e.target.value)}
+            onBlur={onSdtBlur}
+            placeholder="SĐT (nhập rồi Tab để tự tra)"
             className="w-full border rounded px-3 py-1.5 text-sm"
           />
+          {customerHit && (
+            <div className="text-xs text-blue-600">{customerHit}</div>
+          )}
           <input
-            name="sdt"
-            placeholder="SĐT"
+            name="khach_hang"
+            value={khachHang}
+            onChange={(e) => setKhachHang(e.target.value)}
+            placeholder="Tên khách hàng"
             className="w-full border rounded px-3 py-1.5 text-sm"
           />
           <input
@@ -272,18 +301,30 @@ export function PosForm({
             <span>Tạm tính</span>
             <span>{subtotal.toLocaleString("vi-VN")}₫</span>
           </div>
-          <label className="block text-sm">
-            <span className="text-neutral-700">Chiết khấu đơn (%)</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              step="0.01"
-              value={chietKhauDonPct}
-              onChange={(e) => setChietKhauDonPct(Number(e.target.value) || 0)}
-              className="w-full border rounded px-3 py-1.5 mt-1 text-sm"
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-sm">
+              <span className="text-neutral-700">CK đơn (%)</span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step="0.01"
+                value={chietKhauDonPct}
+                onChange={(e) => setChietKhauDonPct(Number(e.target.value) || 0)}
+                className="w-full border rounded px-3 py-1.5 mt-1 text-sm"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-neutral-700">CK đơn (tiền)</span>
+              <input
+                type="number"
+                min={0}
+                value={chietKhauDonTien}
+                onChange={(e) => setChietKhauDonTien(Number(e.target.value) || 0)}
+                className="w-full border rounded px-3 py-1.5 mt-1 text-sm"
+              />
+            </label>
+          </div>
           <input type="hidden" name="chiet_khau" value={chietKhauDon} />
           <input type="hidden" name="chiet_khau_pct" value={chietKhauDonPct} />
           <div className="flex justify-between text-xs text-neutral-500">

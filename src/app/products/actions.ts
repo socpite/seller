@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { num, str } from "@/lib/format";
+import { requireAdmin } from "@/lib/auth";
 
 export async function createProduct(formData: FormData) {
+  await requireAdmin();
   const data = parseForm(formData);
   if (!data.maSp || !data.ten) throw new Error("Mã SP và tên là bắt buộc");
   await prisma.product.create({ data });
@@ -14,6 +16,7 @@ export async function createProduct(formData: FormData) {
 }
 
 export async function updateProduct(id: number, formData: FormData) {
+  await requireAdmin();
   const data = parseForm(formData);
   await prisma.product.update({ where: { id }, data });
   revalidatePath("/products");
@@ -21,6 +24,7 @@ export async function updateProduct(id: number, formData: FormData) {
 }
 
 export async function adjustStock(productId: number, formData: FormData) {
+  await requireAdmin();
   const delta = num(formData.get("delta"));
   const ghiChu = str(formData.get("ghi_chu")) || null;
   if (delta === 0) return;
@@ -37,7 +41,8 @@ export async function adjustStock(productId: number, formData: FormData) {
 }
 
 export async function deleteProduct(id: number) {
-  await prisma.product.delete({ where: { id } });
+  await requireAdmin();
+  await prisma.product.update({ where: { id }, data: { archived: true } });
   revalidatePath("/products");
 }
 
