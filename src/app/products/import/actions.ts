@@ -45,21 +45,20 @@ export async function importProductsBatch(rows: Row[]): Promise<{
   let skipped = 0;
   const errors: string[] = [];
 
-  for (const r of rows) {
-    try {
-      let maSp = pick(r, ["Mã sản phẩm"]);
-      if (!maSp) maSp = pick(r, ["ID sản phẩm"]);
-      if (!maSp) {
-        skipped++;
-        continue;
-      }
-      const ten = pick(r, ["Tên sản phẩm"]);
-      if (!ten) {
-        skipped++;
-        continue;
-      }
+  type Prepared = { maSp: string; data: Record<string, unknown>; raw: Row };
+  const prepared: Prepared[] = [];
 
-      const data = {
+  for (const r of rows) {
+    let maSp = pick(r, ["Mã sản phẩm"]);
+    if (!maSp) maSp = pick(r, ["ID sản phẩm"]);
+    if (!maSp) maSp = `AUTO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+    const ten = pick(r, ["Tên sản phẩm"]);
+    if (!ten) { skipped++; continue; }
+
+    prepared.push({
+      maSp,
+      raw: r,
+      data: {
         maSp,
         maSpCha: pick(r, ["Id sản phẩm cha"]) || null,
         maVach: pick(r, ["Mã vạch"]) || null,
@@ -76,20 +75,33 @@ export async function importProductsBatch(rows: Row[]): Promise<{
         giaVon: pickNum(r, ["Giá vốn"]),
         ton: Math.trunc(pickNum(r, ["Tổng tồn", "Có thể bán"])),
         archived: false,
-      };
-
-      const existing = await prisma.product.findUnique({ where: { maSp } });
-      if (existing) {
-        await prisma.product.update({ where: { maSp }, data });
-        updated++;
-      } else {
-        await prisma.product.create({ data });
-        inserted++;
-      }
-    } catch (e) {
-      errors.push(`Dòng ${JSON.stringify(r).slice(0, 100)}: ${(e as Error).message}`);
-    }
+      },
+    });
   }
+
+  const existing = prepared.length
+    ? await prisma.product.findMany({
+        where: { maSp: { in: prepared.map((p) => p.maSp) } },
+        select: { maSp: true },
+      })
+    : [];
+  const existingSet = new Set(existing.map((e) => e.maSp));
+
+  await Promise.all(
+    prepared.map(async (p) => {
+      try {
+        await prisma.product.upsert({
+          where: { maSp: p.maSp },
+          create: p.data as never,
+          update: p.data as never,
+        });
+        if (existingSet.has(p.maSp)) updated++;
+        else inserted++;
+      } catch (e) {
+        errors.push(`${p.maSp}: ${(e as Error).message}`);
+      }
+    }),
+  );
 
   return { inserted, updated, skipped, errors };
 }

@@ -4,7 +4,8 @@ import { useState } from "react";
 import * as XLSX from "xlsx";
 import { importProductsBatch, refreshProducts } from "./actions";
 
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 100;
+const PARALLEL = 3;
 
 type Result = { inserted: number; updated: number; skipped: number; errors: string[] };
 
@@ -36,14 +37,24 @@ export function ImportForm() {
       setTotal(rows.length);
 
       const agg: Result = { inserted: 0, updated: 0, skipped: 0, errors: [] };
+      const batches: Record<string, unknown>[][] = [];
       for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-        const batch = rows.slice(i, i + BATCH_SIZE);
-        const r = await importProductsBatch(batch);
-        agg.inserted += r.inserted;
-        agg.updated += r.updated;
-        agg.skipped += r.skipped;
-        agg.errors.push(...r.errors);
-        setProgress(Math.min(i + batch.length, rows.length));
+        batches.push(rows.slice(i, i + BATCH_SIZE));
+      }
+
+      let done = 0;
+      for (let i = 0; i < batches.length; i += PARALLEL) {
+        const group = batches.slice(i, i + PARALLEL);
+        const results = await Promise.all(group.map((b) => importProductsBatch(b)));
+        for (let k = 0; k < results.length; k++) {
+          const r = results[k];
+          agg.inserted += r.inserted;
+          agg.updated += r.updated;
+          agg.skipped += r.skipped;
+          agg.errors.push(...r.errors);
+          done += group[k].length;
+        }
+        setProgress(Math.min(done, rows.length));
         setResult({ ...agg });
       }
       await refreshProducts();
