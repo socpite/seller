@@ -34,7 +34,7 @@ export function ImportForm() {
         name="file"
         accept=".xlsx,.xls"
         required
-        className="block text-sm"
+        className="block text-sm w-full border rounded px-3 py-2 bg-white file:mr-3 file:border-0 file:bg-blue-600 file:text-white file:px-3 file:py-1.5 file:rounded file:cursor-pointer hover:file:bg-blue-700"
       />
       <button
         disabled={busy}

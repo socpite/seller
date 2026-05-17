@@ -64,9 +64,10 @@ export function PosForm({
     const c = await lookupCustomer(s);
     if (c) {
       if (!khachHang) setKhachHang(c.ten);
-      if (chietKhauDonPct === 0 && c.chietKhauPct > 0) setChietKhauDonPct(c.chietKhauPct);
+      setChietKhauDonPct(c.chietKhauPct);
       setCustomerHit(`${c.ten} · CK ${c.chietKhauPct}%`);
     } else {
+      setChietKhauDonPct(0);
       setCustomerHit("Khách mới");
     }
   }

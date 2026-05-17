@@ -7,20 +7,28 @@ import { requireAdmin } from "@/lib/auth";
 
 type Row = Record<string, unknown>;
 
-function pick(r: Row, keys: string[]): string {
-  for (const k of keys) {
-    for (const rk of Object.keys(r)) {
-      if (rk.toLowerCase().includes(k.toLowerCase())) {
-        const v = r[rk];
-        if (v != null && String(v).trim() !== "") return String(v).trim();
-      }
-    }
+function norm(s: string) {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function pick(r: Row, names: string[]): string {
+  const map = new Map<string, unknown>();
+  for (const k of Object.keys(r)) map.set(norm(k), r[k]);
+  for (const n of names) {
+    const v = map.get(norm(n));
+    if (v != null && String(v).trim() !== "") return String(v).trim();
   }
   return "";
 }
 
-function pickNum(r: Row, keys: string[]): number {
-  const s = pick(r, keys);
+function pickNum(r: Row, names: string[]): number {
+  const s = pick(r, names);
+  if (!s) return 0;
   const n = Number(s.replace(/[^\d.-]/g, ""));
   return Number.isFinite(n) ? n : 0;
 }
@@ -47,13 +55,13 @@ export async function importProducts(formData: FormData): Promise<{
 
   for (const r of rows) {
     try {
-      let maSp = pick(r, ["mã sản phẩm", "ma san pham", "mã sp"]);
-      if (!maSp) maSp = pick(r, ["id sản phẩm", "id san pham", "id"]);
+      let maSp = pick(r, ["Mã sản phẩm"]);
+      if (!maSp) maSp = pick(r, ["ID sản phẩm"]);
       if (!maSp) {
         skipped++;
         continue;
       }
-      const ten = pick(r, ["tên sản phẩm", "ten san pham", "tên"]);
+      const ten = pick(r, ["Tên sản phẩm"]);
       if (!ten) {
         skipped++;
         continue;
@@ -61,20 +69,20 @@ export async function importProducts(formData: FormData): Promise<{
 
       const data = {
         maSp,
-        maSpCha: pick(r, ["id sản phẩm cha", "ma sp cha", "sản phẩm cha"]) || null,
-        maVach: pick(r, ["mã vạch", "barcode"]) || null,
+        maSpCha: pick(r, ["Id sản phẩm cha"]) || null,
+        maVach: pick(r, ["Mã vạch"]) || null,
         ten,
-        donVi: pick(r, ["đơn vị", "don vi", "dvt"]) || "Cái",
-        anhUrl: pick(r, ["link ảnh", "anh", "image"]) || null,
-        danhMuc: pick(r, ["danh mục", "category"]) || null,
-        hangTrong: pick(r, ["hãng tròng", "hang trong"]) || null,
-        linkWeb: pick(r, ["link trên website", "link website"]) || null,
-        giaNhap: pickNum(r, ["giá nhập", "gia nhap"]),
-        vatNhap: pickNum(r, ["vat nhập", "vat nhap"]),
-        giaBan: pickNum(r, ["giá bán", "gia ban"]),
-        vatBan: pickNum(r, ["vat"]),
-        giaVon: pickNum(r, ["giá vốn", "gia von"]),
-        ton: Math.trunc(pickNum(r, ["tổng tồn", "tong ton", "tồn"])),
+        donVi: pick(r, ["Đơn vị tính"]) || "Cái",
+        anhUrl: pick(r, ["Link ảnh sản phẩm"]) || null,
+        danhMuc: pick(r, ["Danh mục"]) || null,
+        hangTrong: pick(r, ["Hãng tròng"]) || null,
+        linkWeb: pick(r, ["Link trên website"]) || null,
+        giaNhap: pickNum(r, ["Giá nhập"]),
+        vatNhap: pickNum(r, ["VAT nhập"]),
+        giaBan: pickNum(r, ["Giá bán"]),
+        vatBan: pickNum(r, ["VAT"]),
+        giaVon: pickNum(r, ["Giá vốn"]),
+        ton: Math.trunc(pickNum(r, ["Tổng tồn", "Có thể bán"])),
         archived: false,
       };
 
