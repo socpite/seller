@@ -6,6 +6,17 @@ import { getRole } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+function Stat({ label, value, tone }: { label: string; value: string; tone?: "warn" }) {
+  return (
+    <div className="bg-white border rounded-lg px-4 py-3">
+      <div className="text-xs text-neutral-500">{label}</div>
+      <div className={`text-xl font-semibold mt-0.5 ${tone === "warn" ? "text-amber-600" : ""}`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
 export default async function ProductsPage({
   searchParams,
 }: {
@@ -13,6 +24,29 @@ export default async function ProductsPage({
 }) {
   const { q } = await searchParams;
   const isAdmin = (await getRole()) === "admin";
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const [stockAgg, soldAgg, returnedAgg] = await Promise.all([
+    prisma.product.aggregate({
+      where: { archived: false },
+      _count: { _all: true },
+      _sum: { ton: true },
+    }),
+    prisma.salesItem.aggregate({
+      where: { order: { ngay: { gte: monthStart } } },
+      _sum: { soLuong: true },
+    }),
+    prisma.salesReturnItem.aggregate({
+      where: { ret: { ngay: { gte: monthStart } } },
+      _sum: { soLuong: true },
+    }),
+  ]);
+  const soldThisMonth =
+    (soldAgg._sum.soLuong ?? 0) - (returnedAgg._sum.soLuong ?? 0);
+  const lowStock = await prisma.product.count({
+    where: { archived: false, ton: { lte: 3 } },
+  });
   const products = await prisma.product.findMany({
     where: {
       archived: false,
@@ -58,6 +92,13 @@ export default async function ProductsPage({
             </Link>
           )}
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Stat label="Số mặt hàng" value={stockAgg._count._all.toLocaleString("vi-VN")} />
+        <Stat label="Tổng tồn (cái)" value={(stockAgg._sum.ton ?? 0).toLocaleString("vi-VN")} />
+        <Stat label="Bán tháng này" value={soldThisMonth.toLocaleString("vi-VN")} />
+        <Stat label="Sắp hết (≤3)" value={lowStock.toLocaleString("vi-VN")} tone={lowStock > 0 ? "warn" : undefined} />
       </div>
 
       <form className="flex gap-2">
